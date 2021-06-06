@@ -1,8 +1,9 @@
 from sly import Lexer
 from sly import Parser
+from sys import *
 
 class BasicLexer(Lexer):
-    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE}
+    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE, INCREMENT, DECREMENT}
     ignore = '\t '
 
     literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';', '[', ']' }
@@ -27,6 +28,10 @@ class BasicLexer(Lexer):
     LT = r'\<'
     LE = r'\<\='
 
+    # ECHO = r'echo'
+    INCREMENT = r'\+\+'
+    DECREMENT = r'\-\-'
+
     @_(r'\d+')
     def NUMBER(self, t):
         t.value = int(t.value)
@@ -44,9 +49,11 @@ class BasicParser(Parser):
     tokens = BasicLexer.tokens
 
     precedence = (
+        ('left', INCREMENT, DECREMENT),
         ('left', '+', '-'),
         ('left', '*', '/'),
         ('right', 'UMINUS'),
+
         )
 
     def __init__(self):
@@ -55,6 +62,10 @@ class BasicParser(Parser):
     @_('')
     def statement(self, p):
         pass
+
+    # @_('ECHO "(" expr ")"', 'ECHO "(" array ")"')
+    # def statement(self, p):
+    #     return ("ECHO", p[2])
 
     @_('FOR var_assign TO expr THEN statement')
     def statement(self, p):
@@ -83,6 +94,14 @@ class BasicParser(Parser):
     @_('NAME "(" ")"')
     def statement(self, p):
         return ('func_call', p.NAME)
+
+    @_('expr INCREMENT')
+    def expr(self, p):
+        return ("INCREASE", p.expr)
+
+    @_('expr DECREMENT')
+    def expr(self, p):
+        return ("DECREASE", p.expr)
 
     @_('expr EQEQ expr')
     def single_con(self, p):
@@ -186,6 +205,24 @@ class BasicExecute:
 
         if node[0] == 'str':
             return node[1]
+
+        if node[0] == 'INCREASE':
+            temp_v = self.walkTree(node[1])
+            if (type(temp_v) == int):
+                self.env[node[1][1]] = temp_v + 1
+                return node[1][1]
+            else:
+                print(f"The value '{node[1]}' must be an integer")
+                return 0
+
+        if node[0] == 'DECREASE':
+            temp_v = self.walkTree(node[1])
+            if (type(temp_v) == int):
+                self.env[node[1][1]] = temp_v - 1
+                return node[1][1]
+            else:
+                print(f"The value '{node[1]}' must be an integer")
+                return 0
 
         if node[0] == 'if_stmt':
             result = self.walkTree(node[1])
