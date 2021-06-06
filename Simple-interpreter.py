@@ -2,7 +2,7 @@ from sly import Lexer
 from sly import Parser
 
 class BasicLexer(Lexer):
-    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, EQEQ}
+    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, EQEQ, NE}
     ignore = '\t '
 
     literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';' }
@@ -19,6 +19,7 @@ class BasicLexer(Lexer):
     STRING = r'\".*?\"'
 
     EQEQ = r'=='
+    NE = r'!='
 
     @_(r'\d+')
     def NUMBER(self, t):
@@ -68,6 +69,10 @@ class BasicParser(Parser):
     @_('expr EQEQ expr')
     def condition(self, p):
         return ('condition_eqeq', p.expr0, p.expr1)
+
+    @_('expr NE expr')
+    def condition(self, p):
+        return ('condition_ne', p.expr0, p.expr1)
 
     @_('var_assign')
     def statement(self, p):
@@ -156,6 +161,9 @@ class BasicExecute:
 
         if node[0] == 'condition_eqeq':
             return self.walkTree(node[1]) == self.walkTree(node[2])
+            
+        if node[0] == 'condition_ne':
+            return self.walkTree(node[1]) != self.walkTree(node[2])
 
         if node[0] == 'func_def':
             self.env[node[1]] = node[2]
