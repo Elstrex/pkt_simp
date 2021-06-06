@@ -5,7 +5,7 @@ class BasicLexer(Lexer):
     tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE}
     ignore = '\t '
 
-    literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';' }
+    literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';', '[', ']' }
 
     # Define tokens
     IF = r'IF'
