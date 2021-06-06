@@ -2,7 +2,7 @@ from sly import Lexer
 from sly import Parser
 
 class BasicLexer(Lexer):
-    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUN, TO, ARROW, EQEQ }
+    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, EQEQ}
     ignore = '\t '
 
     literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';' }
@@ -12,7 +12,7 @@ class BasicLexer(Lexer):
     THEN = r'THEN'
     ELSE = r'ELSE'
     FOR = r'FOR'
-    FUN = r'FUN'
+    FUNC = r'FUNC'
     TO = r'TO'
     ARROW = r'->'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
@@ -57,13 +57,13 @@ class BasicParser(Parser):
     def statement(self, p):
         return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
 
-    @_('FUN NAME "(" ")" ARROW statement')
+    @_('FUNC NAME "(" ")" ARROW statement')
     def statement(self, p):
-        return ('fun_def', p.NAME, p.statement)
+        return ('func_def', p.NAME, p.statement)
 
     @_('NAME "(" ")"')
     def statement(self, p):
-        return ('fun_call', p.NAME)
+        return ('func_call', p.NAME)
 
     @_('expr EQEQ expr')
     def condition(self, p):
@@ -157,10 +157,10 @@ class BasicExecute:
         if node[0] == 'condition_eqeq':
             return self.walkTree(node[1]) == self.walkTree(node[2])
 
-        if node[0] == 'fun_def':
+        if node[0] == 'func_def':
             self.env[node[1]] = node[2]
 
-        if node[0] == 'fun_call':
+        if node[0] == 'func_call':
             try:
                 return self.walkTree(self.env[node[1]])
             except LookupError:
