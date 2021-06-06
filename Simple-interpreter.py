@@ -1,6 +1,5 @@
 from sly import Lexer
 from sly import Parser
-from sys import *
 
 class BasicLexer(Lexer):
     tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE, INCREMENT, DECREMENT}
@@ -91,7 +90,7 @@ class BasicParser(Parser):
     def statement(self, p):
         return ('func_def', p.NAME, p.statement)
 
-    @_('NAME "(" ")"')
+    @_('NAME "(" ")" ";"')
     def statement(self, p):
         return ('func_call', p.NAME)
 
@@ -139,8 +138,12 @@ class BasicParser(Parser):
     def var_assign(self, p):
         return ('var_assign', p.NAME, p.STRING)
 
-    @_('expr')
+    @_('expr ";"')
     def statement(self, p):
+        return (p.expr)
+
+    @_('expr ";"')
+    def expr(self, p):
         return (p.expr)
 
     @_('expr "+" expr')
