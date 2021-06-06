@@ -1,11 +1,11 @@
-x = 0;
-print x;
-x = 1;
-print x;
-FOR (3 TO 7) THEN
-x = x + 2
+a = 0;
+print a;
+a = 10;
+print a;
+FOR (1 TO 10) THEN
+a = a + 2
  END;
-print x;
+print a;
 
 
 /!FUNC Fib(n) ->
@@ -26,12 +26,6 @@ END;
 
 /!print Fib(10);
 
-
-/!FUNC SayHelloXTimes(times) ->
-  FOR (1 TO times) THEN
-    print "Hello"
-    END
-END;
 a=3;
 print a;
 FUNC abc(b)-> b + 5 END;
