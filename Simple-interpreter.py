@@ -1,5 +1,7 @@
 from sly import Lexer
 from sly import Parser
+from copy import copy
+import sys
 
 class BasicLexer(Lexer):
     tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE, INCREMENT, DECREMENT}
@@ -56,7 +58,8 @@ class BasicParser(Parser):
         )
 
     def __init__(self):
-        self.env = { }
+         self.variables = { }
+         self.functions = { }
 
     @_('')
     def statement(self, p):
@@ -65,66 +68,6 @@ class BasicParser(Parser):
     # @_('ECHO "(" expr ")"', 'ECHO "(" array ")"')
     # def statement(self, p):
     #     return ("ECHO", p[2])
-
-    @_('FOR var_assign TO expr THEN statement')
-    def statement(self, p):
-        return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement)
-
-    @_('IF "(" condition ")" THEN statement ELSE statement')
-    def statement(self, p):
-        return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
-
-    @_('single_con AND single_con')
-    def condition(self, p):
-        return 'condition_and', p.single_con0, p.single_con1
-
-    @_('single_con OR single_con')
-    def condition(self, p):
-        return 'condition_or', p.single_con0, p.single_con1
-
-    @_('single_con')
-    def condition(self, p):
-        return p.single_con
-
-    @_('FUNC NAME "(" ")" ARROW statement')
-    def statement(self, p):
-        return ('func_def', p.NAME, p.statement)
-
-    @_('NAME "(" ")" ";"')
-    def statement(self, p):
-        return ('func_call', p.NAME)
-
-    @_('expr INCREMENT')
-    def expr(self, p):
-        return ("INCREASE", p.expr)
-
-    @_('expr DECREMENT')
-    def expr(self, p):
-        return ("DECREASE", p.expr)
-
-    @_('expr EQEQ expr')
-    def single_con(self, p):
-        return ('condition_eqeq', p.expr0, p.expr1)
-
-    @_('expr NE expr')
-    def single_con(self, p):
-        return ('condition_ne', p.expr0, p.expr1)
-
-    @_('expr GT expr')
-    def single_con(self, p):
-        return ('condition_gt', p.expr0, p.expr1)
-
-    @_('expr GE expr')
-    def single_con(self, p):
-        return ('condition_ge', p.expr0, p.expr1)
-
-    @_('expr LT expr')
-    def single_con(self, p):
-        return ('condition_lt', p.expr0, p.expr1)
-
-    @_('expr LE expr')
-    def single_con(self, p):
-        return ('condition_le', p.expr0, p.expr1)
 
     @_('var_assign')
     def statement(self, p):
@@ -174,12 +117,72 @@ class BasicParser(Parser):
     def expr(self, p):
         return ('num', p.NUMBER)
 
+    @_('FOR var_assign TO expr THEN statement')
+    def statement(self, p):
+        return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement)
 
+    @_('IF "(" condition ")" THEN statement ELSE statement')
+    def statement(self, p):
+        return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
+
+    @_('single_con AND single_con')
+    def condition(self, p):
+        return 'condition_and', p.single_con0, p.single_con1
+
+    @_('single_con OR single_con')
+    def condition(self, p):
+        return 'condition_or', p.single_con0, p.single_con1
+
+    @_('single_con')
+    def condition(self, p):
+        return p.single_con
+
+    @_('FUNC NAME "(" NAME ")" ARROW statement ")" ";"')
+    def statement(self, p):
+        return ('func_def', p.NAME0, p.NAME1, p.statement)
+
+    @_('NAME "(" expr ")"')
+    def expr(self, p):
+        return ('func_call', p.NAME, p.expr)
+
+    @_('expr INCREMENT')
+    def expr(self, p):
+        return ("INCREASE", p.expr)
+
+    @_('expr DECREMENT')
+    def expr(self, p):
+        return ("DECREASE", p.expr)
+
+    @_('expr EQEQ expr')
+    def single_con(self, p):
+        return ('condition_eqeq', p.expr0, p.expr1)
+
+    @_('expr NE expr')
+    def single_con(self, p):
+        return ('condition_ne', p.expr0, p.expr1)
+
+    @_('expr GT expr')
+    def single_con(self, p):
+        return ('condition_gt', p.expr0, p.expr1)
+
+    @_('expr GE expr')
+    def single_con(self, p):
+        return ('condition_ge', p.expr0, p.expr1)
+
+    @_('expr LT expr')
+    def single_con(self, p):
+        return ('condition_lt', p.expr0, p.expr1)
+
+    @_('expr LE expr')
+    def single_con(self, p):
+        return ('condition_le', p.expr0, p.expr1)
 
 class BasicExecute:
 
-    def __init__(self, tree, env):
-        self.env = env
+    def __init__(self, tree, variables, functions):
+        #self.env = env
+        self.variables = variables
+        self.functions = functions
         result = self.walkTree(tree)
         if result is not None and isinstance(result, int):
             print(result)
@@ -212,7 +215,7 @@ class BasicExecute:
         if node[0] == 'INCREASE':
             temp_v = self.walkTree(node[1])
             if (type(temp_v) == int):
-                self.env[node[1][1]] = temp_v + 1
+                self.variables[node[1][1]] = temp_v + 1
                 return node[1][1]
             else:
                 print(f"The value '{node[1]}' must be an integer")
@@ -221,7 +224,7 @@ class BasicExecute:
         if node[0] == 'DECREASE':
             temp_v = self.walkTree(node[1])
             if (type(temp_v) == int):
-                self.env[node[1][1]] = temp_v - 1
+                self.variables[node[1][1]] = temp_v - 1
                 return node[1][1]
             else:
                 print(f"The value '{node[1]}' must be an integer")
@@ -269,14 +272,56 @@ class BasicExecute:
             return self.walkTree(node[1]) <= self.walkTree(node[2])
 
         if node[0] == 'func_def':
-            self.env[node[1]] = node[2]
+            self.functions[node[1]] = (node[2], node[3])
+            pass
 
         if node[0] == 'func_call':
             try:
-                return self.walkTree(self.env[node[1]])
-            except LookupError:
-                print("Undefined function '%s'" % node[1])
-                return 0
+                # Get node[1] (NAME) key from self.functions
+                function_data = self.functions[node[1]]
+
+                # Create temp variables for the function scope
+                tempVariables = copy(self.variables)
+                #print(tempVariables)
+                
+                tempVariables[function_data[0]] = [self.walkTree(node[2])]
+
+                newParser = BasicExecute("()", tempVariables, self.functions)
+                return newParser.walkTree(function_data[1])
+            except Exception as e:
+                print(e)
+                pass
+
+        # if node[0] == 'func_call':
+        #     try:
+        #         function = self.env[node[1]]
+        #     except LookupError:
+        #         print("Undefined function '%s'" % node[1])
+        #         return None   
+        #     functionArgs = function[1][1]
+        #     args = node[2]
+        #     if(len(functionArgs) != len(args)):
+        #         print("Invalid argument count for function " + node[1] + ", expected " + str(len(functionArgs)) + " arguments, but got " + str(len(args)))
+        #         return None
+
+        #     newEnv = copy.deepcopy(self.env)
+        #     oldEnv = self.env
+        #     for i in range(len(functionArgs)):
+        #         arg = self.walkTree(args[i])
+        #         newEnv[functionArgs[i]] = arg
+        #     self.env = newEnv
+        #     returnValue = self.walkTree(function[0])
+        #     self.env = oldEnv
+            
+        #     if(returnValue != None):
+        #         return returnValue
+
+        # if node[0] == 'func_call':
+        #     try:
+        #         return self.walkTree(self.env[node[1]])
+        #     except LookupError:
+        #         print("Undefined function '%s'" % node[1])
+        #         return 0
 
         if node[0] == 'add':
             return self.walkTree(node[1]) + self.walkTree(node[2])
@@ -285,15 +330,15 @@ class BasicExecute:
         elif node[0] == 'mul':
             return self.walkTree(node[1]) * self.walkTree(node[2])
         elif node[0] == 'div':
-            return self.walkTree(node[1]) / self.walkTree(node[2])
+            return int(self.walkTree(node[1]) / self.walkTree(node[2]))
 
         if node[0] == 'var_assign':
-            self.env[node[1]] = self.walkTree(node[2])
+            self.variables[node[1]] = self.walkTree(node[2])
             return node[1]
 
         if node[0] == 'var':
             try:
-                return self.env[node[1]]
+                return self.variables[node[1]]
             except LookupError:
                 print("Undefined variable '"+node[1]+"' found!")
                 return 0
@@ -302,15 +347,15 @@ class BasicExecute:
             if node[1][0] == 'for_loop_setup':
                 loop_setup = self.walkTree(node[1])
 
-                loop_count = self.env[loop_setup[0]]
+                loop_count = self.variables[loop_setup[0]]
                 loop_limit = loop_setup[1]
 
                 for i in range(loop_count+1, loop_limit+1):
                     res = self.walkTree(node[2])
                     if res is not None:
                         print(res)
-                    self.env[loop_setup[0]] = i
-                del self.env[loop_setup[0]]
+                    self.variables[loop_setup[0]] = i
+                del self.variables[loop_setup[0]]
 
         if node[0] == 'for_loop_setup':
             return (self.walkTree(node[1]), self.walkTree(node[2]))
@@ -319,12 +364,40 @@ class BasicExecute:
 if __name__ == '__main__':
     lexer = BasicLexer()
     parser = BasicParser()
-    env = {}
+    variables = { }
+    functions = { }
+
+    SIMP = BasicExecute("()", variables, functions)
+
+    if len(sys.argv) == 2:
+        f = open(sys.argv[1], "r")
+        program = f.read()
+        for line in program.replace("\n", "").split(";"):
+            tree = parser.parse(lexer.tokenize(line))
+            result = SIMP.walkTree(tree)
+            if result is not None:
+                resultTree = parser.parse(lexer.tokenize("printFile {0} result.txt".format(result)))
+                SIMP.walkTree(resultTree)
+
     while True:
         try:
-            text = input('basic > ')
+            text = input('SIMP > ')
+        
         except EOFError:
             break
+        
         if text:
             tree = parser.parse(lexer.tokenize(text))
-            BasicExecute(tree, env)
+            result = SIMP.walkTree(tree)
+            if result is not None and isinstance(result, int):
+                print(result)
+            if isinstance(result, str) and result[0] == '"':
+                print(result)
+    # while True:
+    #     try:
+    #         text = input('basic > ')
+    #     except EOFError:
+    #         break
+    #     if text:
+    #         tree = parser.parse(lexer.tokenize(text))
+    #         BasicExecute(tree, variables, functions)

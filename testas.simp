@@ -1,0 +1,43 @@
+x = 0;
+print x;
+x = 1;
+print x;
+FOR (3 TO 7) THEN
+x = x + 2
+ END;
+print x;
+
+
+/!FUNC Fib(n) ->
+    IF (n < 0) THEN
+        0
+    ELSE 
+        IF (n == 1) THEN
+            0
+        ELSE
+            IF (n == 2) THEN
+                1
+            ELSE 
+                Fib(n - 1) + Fib(n - 2)
+            END
+        END
+    END
+END;
+
+/!print Fib(10);
+
+
+/!FUNC SayHelloXTimes(times) ->
+  FOR (1 TO times) THEN
+    print "Hello"
+    END
+END;
+a=3;
+print a;
+FUNC abc(b)-> b + 5 END;
+c=5;
+print c;
+print "aaaaaaa";
+c = abc(a);
+print "aaaaaa";
+print c;

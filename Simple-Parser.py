@@ -1,5 +1,7 @@
 from sly import Lexer
 from sly import Parser
+from copy import copy
+import sys
 
 class BasicLexer(Lexer):
     tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE, INCREMENT, DECREMENT}
@@ -56,7 +58,8 @@ class BasicParser(Parser):
         )
 
     def __init__(self):
-        self.env = { }
+         self.variables = { }
+         self.functions = { }
 
     @_('')
     def statement(self, p):
@@ -66,11 +69,11 @@ class BasicParser(Parser):
     # def statement(self, p):
     #     return ("ECHO", p[2])
 
-    @_('FOR var_assign TO expr THEN statement ";"')
+    @_('FOR var_assign TO expr THEN statement')
     def statement(self, p):
         return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement)
 
-    @_('IF "(" condition ")" THEN statement ELSE statement ";"')
+    @_('IF "(" condition ")" THEN statement ELSE statement')
     def statement(self, p):
         return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
 
@@ -85,20 +88,28 @@ class BasicParser(Parser):
     @_('single_con')
     def condition(self, p):
         return p.single_con
+    
+    # @_('')
+    # def vars(self, p):
+    #     pass
 
-    @_('FUNC NAME "(" ")" ARROW statement ";"')
+    # @_('vars')
+    # def vars(self, p):
+    #     return p.vars
+
+    @_('FUNC NAME "(" NAME ")" ARROW statement')
     def statement(self, p):
-        return ('func_def', p.NAME, p.statement)
+        return ('func_def', p.NAME0, p.NAME1, p.statement)
 
-    @_('NAME "(" ")"')
+    @_('NAME "(" expr ")" ";"')
     def statement(self, p):
-        return ('func_call', p.NAME)
+        return ('func_call', p.NAME, p.expr)
 
-    @_('expr INCREMENT ";"')
+    @_('expr INCREMENT')
     def expr(self, p):
         return ("INCREASE", p.expr)
 
-    @_('expr DECREMENT ";"')
+    @_('expr DECREMENT')
     def expr(self, p):
         return ("DECREASE", p.expr)
 
@@ -130,11 +141,11 @@ class BasicParser(Parser):
     def statement(self, p):
         return p.var_assign
 
-    @_('NAME "=" expr ";"')
+    @_('NAME "=" expr')
     def var_assign(self, p):
         return ('var_assign', p.NAME, p.expr)
 
-    @_('NAME "=" STRING ";"')
+    @_('NAME "=" STRING')
     def var_assign(self, p):
         return ('var_assign', p.NAME, p.STRING)
 
@@ -142,19 +153,23 @@ class BasicParser(Parser):
     def statement(self, p):
         return (p.expr)
 
+    @_('expr ";"')
+    def expr(self, p):
+        return (p.expr)
+
     @_('expr "+" expr')
     def expr(self, p):
         return ('add', p.expr0, p.expr1)
 
-    @_('expr "-" expr ";"')
+    @_('expr "-" expr')
     def expr(self, p):
         return ('sub', p.expr0, p.expr1)
 
-    @_('expr "*" expr ";"')
+    @_('expr "*" expr')
     def expr(self, p):
         return ('mul', p.expr0, p.expr1)
 
-    @_('expr "/" expr ";"')
+    @_('expr "/" expr')
     def expr(self, p):
         return ('div', p.expr0, p.expr1)
 
@@ -171,11 +186,43 @@ class BasicParser(Parser):
         return ('num', p.NUMBER)
 
 
-
 if __name__ == '__main__':
+    # lexer = BasicLexer()
+    # parser = BasicParser()
+    # variables = { }
+    # functions = { }
+
+    # SIMP = BasicExecute("()", variables, functions)
+
+    # if len(sys.argv) == 2:
+    #     f = open(sys.argv[1], "r")
+    #     program = f.read()
+    #     for line in program.replace("\n", "").split(";"):
+    #         tree = parser.parse(lexer.tokenize(line))
+    #         result = SIMP.walkTree(tree)
+    #         if result is not None:
+    #             resultTree = parser.parse(lexer.tokenize("printFile {0} result.txt".format(result)))
+    #             SIMP.walkTree(resultTree)
+
+    # while True:
+    #     try:
+    #         text = input('SIMP > ')
+        
+    #     except EOFError:
+    #         break
+        
+    #     if text:
+    #         tree = parser.parse(lexer.tokenize(text))
+    #         result = SIMP.walkTree(tree)
+    #         if result is not None and isinstance(result, int):
+    #             print(result)
+    #         if isinstance(result, str) and result[0] == '"':
+    #             print(result)
+
     lexer = BasicLexer()
     parser = BasicParser()
-    env = {}
+    variables = {}
+    functions ={}
     while True:
         try:
             text = input('basic > ')
