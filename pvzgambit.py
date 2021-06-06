@@ -1,5 +1,3 @@
-gambit
-
 from sly import Lexer
 from sly import Parser
 

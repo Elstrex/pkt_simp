@@ -2,7 +2,7 @@ from sly import Lexer
 from sly import Parser
 
 class BasicLexer(Lexer):
-    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, EQEQ, NE}
+    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE}
     ignore = '\t '
 
     literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';' }
@@ -14,12 +14,18 @@ class BasicLexer(Lexer):
     FOR = r'FOR'
     FUNC = r'FUNC'
     TO = r'TO'
+    AND = r'AND'
+    OR = r'OR'
     ARROW = r'->'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
     STRING = r'\".*?\"'
 
     EQEQ = r'=='
-    NE = r'!='
+    NE = r'\!\='
+    GT = r'\>'
+    GE = r'\>\='
+    LT = r'\<'
+    LE = r'\<\='
 
     @_(r'\d+')
     def NUMBER(self, t):
@@ -54,9 +60,21 @@ class BasicParser(Parser):
     def statement(self, p):
         return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement)
 
-    @_('IF condition THEN statement ELSE statement')
+    @_('IF "(" condition ")" THEN statement ELSE statement')
     def statement(self, p):
         return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
+
+    @_('single_con AND single_con')
+    def condition(self, p):
+        return 'condition_and', p.single_con0, p.single_con1
+
+    @_('single_con OR single_con')
+    def condition(self, p):
+        return 'condition_or', p.single_con0, p.single_con1
+
+    @_('single_con')
+    def condition(self, p):
+        return p.single_con
 
     @_('FUNC NAME "(" ")" ARROW statement')
     def statement(self, p):
@@ -67,12 +85,28 @@ class BasicParser(Parser):
         return ('func_call', p.NAME)
 
     @_('expr EQEQ expr')
-    def condition(self, p):
+    def single_con(self, p):
         return ('condition_eqeq', p.expr0, p.expr1)
 
     @_('expr NE expr')
-    def condition(self, p):
+    def single_con(self, p):
         return ('condition_ne', p.expr0, p.expr1)
+
+    @_('expr GT expr')
+    def single_con(self, p):
+        return ('condition_gt', p.expr0, p.expr1)
+
+    @_('expr GE expr')
+    def single_con(self, p):
+        return ('condition_ge', p.expr0, p.expr1)
+
+    @_('expr LT expr')
+    def single_con(self, p):
+        return ('condition_lt', p.expr0, p.expr1)
+
+    @_('expr LE expr')
+    def single_con(self, p):
+        return ('condition_le', p.expr0, p.expr1)
 
     @_('var_assign')
     def statement(self, p):
@@ -155,15 +189,44 @@ class BasicExecute:
 
         if node[0] == 'if_stmt':
             result = self.walkTree(node[1])
-            if result:
-                return self.walkTree(node[2][1])
-            return self.walkTree(node[2][2])
+            if node[2][0] == 'branch':
+                if result:
+                    return self.walkTree(node[2][1])
+                return self.walkTree(node[2][2])
+            else:
+                if result:
+                    return self.walkTree(node[2])
+                return 0
+
+        # if node[0] == 'if_stmt':
+        #     result = self.walkTree(node[1])
+        #     if result:
+        #         return self.walkTree(node[2][1])
+        #     return self.walkTree(node[2][2])
+
+        if node[0] == 'condition_and':
+            return self.walkTree(node[1]) and self.walkTree(node[2])
+            
+        if node[0] == 'condition_or':
+            return self.walkTree(node[1]) or self.walkTree(node[2])
 
         if node[0] == 'condition_eqeq':
             return self.walkTree(node[1]) == self.walkTree(node[2])
             
         if node[0] == 'condition_ne':
             return self.walkTree(node[1]) != self.walkTree(node[2])
+
+        if node[0] == 'condition_gt':
+            return self.walkTree(node[1]) > self.walkTree(node[2])
+            
+        if node[0] == 'condition_ge':
+            return self.walkTree(node[1]) >= self.walkTree(node[2])
+
+        if node[0] == 'condition_lt':
+            return self.walkTree(node[1]) < self.walkTree(node[2])
+            
+        if node[0] == 'condition_le':
+            return self.walkTree(node[1]) <= self.walkTree(node[2])
 
         if node[0] == 'func_def':
             self.env[node[1]] = node[2]
