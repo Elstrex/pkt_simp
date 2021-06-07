@@ -1,7 +1,6 @@
 from sly import Lexer
 from sly import Parser
 from copy import copy
-import sys
 
 class SIMPLexer(Lexer):
     tokens = { IF, THEN, ELSE, NAME, NUMBER, STRING, FOR, TO, END, ARROW, FUNC, PRINT, PRINTF, FILENAME, EQEQ, NE, GT, LT, INCREMENT, DECREMENT, AND }

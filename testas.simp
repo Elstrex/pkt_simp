@@ -29,14 +29,14 @@ print Fib(10);
 a = 0;
 b = 1;
 FOR(1 TO 2) THEN 
-    a+1 AND
+    print b AND
     print a AND
     print 2+2
 END;
 
 a = 0;
 b = 1;
-FOR(1 TO 3) THEN 
+/!FOR(1 TO 3) THEN 
     temp=a AND
     a=b AND
     b=temp+b
