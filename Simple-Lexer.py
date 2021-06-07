@@ -1,6 +1,6 @@
 from sly import Lexer
 
-class BasicLexer(Lexer):
+class SIMPLexer(Lexer):
     tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUN, TO, ARROW, EQEQ }
     ignore = '\t '
 
@@ -35,11 +35,11 @@ class BasicLexer(Lexer):
 
 
 if __name__ == '__main__':
-    lexer = BasicLexer()
+    lexer = SIMPLexer()
     env = {}
     while True:
         try:
-            text = input('basic > ')
+            text = input('simp > ')
         except EOFError:
             break
         if text:

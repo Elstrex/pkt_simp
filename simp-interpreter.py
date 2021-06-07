@@ -4,7 +4,7 @@ from copy import copy
 import sys
 
 class SIMPLexer(Lexer):
-    tokens = { IF, THEN, ELSE, NAME, NUMBER, STRING, FOR, TO, END, ARROW, FUNC, PRINT, PRINTF, FILENAME, EQEQ, NE, GT, LT, INCREMENT, DECREMENT, RETURN }
+    tokens = { IF, THEN, ELSE, NAME, NUMBER, STRING, FOR, TO, END, ARROW, FUNC, PRINT, PRINTF, FILENAME, EQEQ, NE, GT, LT, INCREMENT, DECREMENT, AND }
     ignore = '\t '
     literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';', '{', '}', '[', ']'}
   
@@ -18,7 +18,7 @@ class SIMPLexer(Lexer):
     IF = r'IF'
     THEN = r'THEN'
     ELSE = r'ELSE'
-    RETURN = r'RETURN'
+    AND = r'AND'
 
     EQEQ = r'\=\='
     NE = r'\!\='
@@ -139,6 +139,10 @@ class SIMPParser(Parser):
     @_('expr NE expr')
     def expr(self, p):
         return ('not_equal', p.expr0, p.expr1)
+    
+    @_('FOR "(" expr TO expr ")" THEN statement AND statement AND statement END')
+    def statement(self, p):
+      return ('for_loop_3', p.expr0, p.expr1, p.statement0, p.statement1, p.statement2)
 
     @_('FOR "(" expr TO expr ")" THEN statement END')
     def statement(self, p):
@@ -267,6 +271,15 @@ class SIMPExecute:
         if node[0] == 'for_loop':
             for _ in range(self.walkTree(node[1]), self.walkTree(node[2]) + 1):
                 self.walkTree(node[3])
+
+            pass
+        
+        if node[0] == 'for_loop_3':
+            for _ in range(self.walkTree(node[1]), self.walkTree(node[2]) + 1):
+                print(node[5])
+                self.walkTree(node[3])
+                self.walkTree(node[4])
+                self.walkTree(node[5])
 
             pass
 

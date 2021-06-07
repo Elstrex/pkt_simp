@@ -3,107 +3,114 @@ from sly import Parser
 from copy import copy
 import sys
 
-class BasicLexer(Lexer):
-    tokens = { NAME, NUMBER, STRING, IF, THEN, ELSE, FOR, FUNC, TO, ARROW, AND, OR, EQEQ, NE, GT, GE, LT, LE, INCREMENT, DECREMENT}
+class SIMPLexer(Lexer):
+    tokens = { IF, THEN, ELSE, NAME, NUMBER, STRING, FOR, TO, END, ARROW, FUNC, PRINT, PRINTF, FILENAME, EQEQ, NE, GT, LT, INCREMENT, DECREMENT, AND }
     ignore = '\t '
-
-    literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';', '[', ']' }
-
-    # Define tokens
+    literals = { '=', '+', '-', '/', '*', '(', ')', ',', ';', '{', '}', '[', ']'}
+  
+    PRINTF = r'printf'
+    PRINT = r'print'
+    FUNC = r'FUNC'
+    FOR = r'FOR'
+    TO = r'TO'
+    END = r'END'
+    ARROW = r'->'
     IF = r'IF'
     THEN = r'THEN'
     ELSE = r'ELSE'
-    FOR = r'FOR'
-    FUNC = r'FUNC'
-    TO = r'TO'
     AND = r'AND'
-    OR = r'OR'
-    ARROW = r'->'
-    NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
-    STRING = r'\".*?\"'
 
-    EQEQ = r'=='
+    EQEQ = r'\=\='
     NE = r'\!\='
     GT = r'\>'
-    GE = r'\>\='
     LT = r'\<'
-    LE = r'\<\='
-
-    # ECHO = r'echo'
     INCREMENT = r'\+\+'
     DECREMENT = r'\-\-'
 
+    FILENAME = r'[a-zA-Z0-9_]*\.[a-zA-Z]*'
+    NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
+    STRING = r'\".*?\"'
+  
     @_(r'\d+')
     def NUMBER(self, t):
-        t.value = int(t.value)
+        t.value = int(t.value) 
         return t
-
-    @_(r'#.*')
+  
+    @_(r'/!.*')
     def COMMENT(self, t):
         pass
-
+  
     @_(r'\n+')
-    def newline(self,t ):
+    def newline(self, t):
         self.lineno = t.value.count('\n')
 
-class BasicParser(Parser):
-    tokens = BasicLexer.tokens
 
+class SIMPParser(Parser):
+    tokens = SIMPLexer.tokens
+  
     precedence = (
         ('left', INCREMENT, DECREMENT),
         ('left', '+', '-'),
         ('left', '*', '/'),
+        ('left', ','),
         ('right', 'UMINUS'),
-
-        )
-
+    )
+  
     def __init__(self):
-         self.variables = { }
-         self.functions = { }
-
+        self.variables = { }
+        self.functions = { }
+  
     @_('')
     def statement(self, p):
         pass
-
-    # @_('ECHO "(" expr ")"', 'ECHO "(" array ")"')
-    # def statement(self, p):
-    #     return ("ECHO", p[2])
-
-    @_('FOR var_assign TO expr THEN statement')
+  
+    @_('var_assign')
     def statement(self, p):
-        return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement)
-
-    @_('IF "(" condition ")" THEN statement ELSE statement')
+        return p.var_assign
+  
+    @_('NAME "=" expr')
+    def var_assign(self, p):
+        return ('var_assign', p.NAME, p.expr)
+  
+    @_('NAME "=" STRING')
+    def var_assign(self, p):
+        return ('var_assign', p.NAME, p.STRING)
+  
+    @_('expr')
     def statement(self, p):
-        return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
+        return (p.expr)
+  
+    @_('expr "+" expr')
+    def expr(self, p):
+        return ('add', p.expr0, p.expr1)
+  
+    @_('expr "-" expr')
+    def expr(self, p):
+        return ('sub', p.expr0, p.expr1)
+  
+    @_('expr "*" expr')
+    def expr(self, p):
+        return ('mul', p.expr0, p.expr1)
+  
+    @_('expr "/" expr')
+    def expr(self, p):
+        return ('div', p.expr0, p.expr1)
+  
+    @_('"-" expr %prec UMINUS')
+    def expr(self, p):
+        return p.expr
+  
+    @_('NAME')
+    def expr(self, p):
+        return ('var', p.NAME)
+  
+    @_('NUMBER')
+    def expr(self, p):
+        return ('num', p.NUMBER)
 
-    @_('single_con AND single_con')
-    def condition(self, p):
-        return 'condition_and', p.single_con0, p.single_con1
-
-    @_('single_con OR single_con')
-    def condition(self, p):
-        return 'condition_or', p.single_con0, p.single_con1
-
-    @_('single_con')
-    def condition(self, p):
-        return p.single_con
-    
-    # @_('')
-    # def vars(self, p):
-    #     pass
-
-    # @_('vars')
-    # def vars(self, p):
-    #     return p.vars
-
-    @_('FUNC NAME "(" NAME ")" ARROW statement')
-    def statement(self, p):
-        return ('func_def', p.NAME0, p.NAME1, p.statement)
-
-    @_('NAME "(" expr ")" ";"')
-    def statement(self, p):
-        return ('func_call', p.NAME, p.expr)
+    @_('STRING')
+    def expr(self, p):
+        return ('str', p.STRING)
 
     @_('expr INCREMENT')
     def expr(self, p):
@@ -113,119 +120,74 @@ class BasicParser(Parser):
     def expr(self, p):
         return ("DECREASE", p.expr)
 
-    @_('expr EQEQ expr')
-    def single_con(self, p):
-        return ('condition_eqeq', p.expr0, p.expr1)
-
-    @_('expr NE expr')
-    def single_con(self, p):
-        return ('condition_ne', p.expr0, p.expr1)
-
-    @_('expr GT expr')
-    def single_con(self, p):
-        return ('condition_gt', p.expr0, p.expr1)
-
-    @_('expr GE expr')
-    def single_con(self, p):
-        return ('condition_ge', p.expr0, p.expr1)
+    @_('IF "(" expr ")" THEN statement ELSE statement END')
+    def statement(self, p):
+      return ('if_stmt', p.expr, p.statement0, p.statement1)
 
     @_('expr LT expr')
-    def single_con(self, p):
-        return ('condition_lt', p.expr0, p.expr1)
+    def expr(self, p):
+        return ('less_than', p.expr0, p.expr1)   
 
-    @_('expr LE expr')
-    def single_con(self, p):
-        return ('condition_le', p.expr0, p.expr1)
+    @_('expr GT expr')
+    def expr(self, p):
+        return ('greater_than', p.expr0, p.expr1)
 
-    @_('var_assign')
+    @_('expr EQEQ expr')
+    def expr(self, p):
+        return ('equal_equal', p.expr0, p.expr1)
+
+    @_('expr NE expr')
+    def expr(self, p):
+        return ('not_equal', p.expr0, p.expr1)
+    
+    @_('FOR "(" expr TO expr ")" THEN statement AND statement AND statement END')
     def statement(self, p):
-        return p.var_assign
+      return ('for_loop_3', p.expr0, p.expr1, p.statement0, p.statement1, p.statement2)
 
-    @_('NAME "=" expr')
-    def var_assign(self, p):
-        return ('var_assign', p.NAME, p.expr)
-
-    @_('NAME "=" STRING')
-    def var_assign(self, p):
-        return ('var_assign', p.NAME, p.STRING)
-
-    @_('expr ";"')
+    @_('FOR "(" expr TO expr ")" THEN statement END')
     def statement(self, p):
-        return (p.expr)
+      return ('for_loop', p.expr0, p.expr1, p.statement)
 
-    @_('expr ";"')
+    @_('FUNC NAME "(" NAME ")" ARROW statement END')
+    def statement(self, p):
+        return ('func_def', p.NAME0, p.NAME1, p.statement)
+
+    @_('NAME "(" expr ")"')
     def expr(self, p):
-        return (p.expr)
+        return ('func_call', p.NAME, p.expr)
 
-    @_('expr "+" expr')
+    @_('PRINT expr')
+    def statement(self, p):
+        return ('print', p.expr)
+
+    @_('PRINT statement')
+    def statement(self, p):
+        return ('print', p.statement)
+
+    @_('expr "," expr')
     def expr(self, p):
-        return ('add', p.expr0, p.expr1)
+        return ('arg_list', p.expr0, p.expr1)
 
-    @_('expr "-" expr')
-    def expr(self, p):
-        return ('sub', p.expr0, p.expr1)
+    # @_('RETURN "(" statement ")"')
+    # def statement(self, p):
+    #     return [0, ("RETURN", p[1])]
 
-    @_('expr "*" expr')
-    def expr(self, p):
-        return ('mul', p.expr0, p.expr1)
+    # @_('statements RETURN statement')
+    # def statements(self, p):
+    #     return [p[0], ("RETURN", p[2])]
 
-    @_('expr "/" expr')
-    def expr(self, p):
-        return ('div', p.expr0, p.expr1)
-
-    @_('"-" expr %prec UMINUS')
-    def expr(self, p):
-        return p.expr
-
-    @_('NAME')
-    def expr(self, p):
-        return ('var', p.NAME)
-
-    @_('NUMBER')
-    def expr(self, p):
-        return ('num', p.NUMBER)
-
+    @_('PRINTF expr FILENAME')
+    def expr(self, p): 
+        return ('print_file', p.expr, p.FILENAME)
 
 if __name__ == '__main__':
-    # lexer = BasicLexer()
-    # parser = BasicParser()
-    # variables = { }
-    # functions = { }
-
-    # SIMP = BasicExecute("()", variables, functions)
-
-    # if len(sys.argv) == 2:
-    #     f = open(sys.argv[1], "r")
-    #     program = f.read()
-    #     for line in program.replace("\n", "").split(";"):
-    #         tree = parser.parse(lexer.tokenize(line))
-    #         result = SIMP.walkTree(tree)
-    #         if result is not None:
-    #             resultTree = parser.parse(lexer.tokenize("printFile {0} result.txt".format(result)))
-    #             SIMP.walkTree(resultTree)
-
-    # while True:
-    #     try:
-    #         text = input('SIMP > ')
-        
-    #     except EOFError:
-    #         break
-        
-    #     if text:
-    #         tree = parser.parse(lexer.tokenize(text))
-    #         result = SIMP.walkTree(tree)
-    #         if result is not None and isinstance(result, int):
-    #             print(result)
-    #         if isinstance(result, str) and result[0] == '"':
-    #             print(result)
-
-    lexer = BasicLexer()
-    parser = BasicParser()
+    lexer = SIMPLexer()
+    parser = SIMPParser()
     variables = {}
     functions ={}
     while True:
         try:
-            text = input('basic > ')
+            text = input('simp > ')
         except EOFError:
             break
         if text:
